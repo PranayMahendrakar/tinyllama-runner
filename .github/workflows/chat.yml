@@ -4,11 +4,11 @@ on:
   workflow_dispatch:
     inputs:
       question:
-        description: 'User question for TinyLlama'
+        description: 'User question'
         required: true
         default: 'Who are you?'
       msg_id:
-        description: 'Unique message ID for response tracking'
+        description: 'Unique message ID'
         required: true
         default: 'default'
 
@@ -28,13 +28,26 @@ jobs:
         with:
           python-version: '3.10'
 
+      - name: Cache pip packages
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: pip-transformers-torch
+          restore-keys: pip-transformers-torch
+
+      - name: Cache TinyLlama model
+        uses: actions/cache@v3
+        id: model-cache
+        with:
+          path: ./model
+          key: tinyllama-1.1b-chat-v1.0
+
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
       - name: Run TinyLlama
-        id: run_llama
         run: |
           python - <<'PYEOF'
           from transformers import AutoModelForCausalLM, AutoTokenizer
@@ -45,29 +58,35 @@ jobs:
           print(f"Question: {question}")
 
           model_name = "TinyLlama/TinyLlama-1.1B-Chat-v1.0"
-          print("Loading TinyLlama...")
+          cache_dir  = "./model"
 
-          tokenizer = AutoTokenizer.from_pretrained(model_name, cache_dir="./model")
+          tokenizer = AutoTokenizer.from_pretrained(model_name, cache_dir=cache_dir)
           model = AutoModelForCausalLM.from_pretrained(
-              model_name, cache_dir="./model", torch_dtype=torch.float32
+              model_name, cache_dir=cache_dir, torch_dtype=torch.float32
           )
           model.to(torch.device("cpu"))
           model.eval()
-          print("Loaded!")
+          print("Model ready.")
 
           messages = [
               {"role": "system", "content": "You are a helpful, friendly AI assistant."},
               {"role": "user",   "content": question}
           ]
-          prompt = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
+          prompt = tokenizer.apply_chat_template(
+              messages, tokenize=False, add_generation_prompt=True
+          )
           encoded = tokenizer(prompt, return_tensors="pt")
           input_length = encoded["input_ids"].shape[1]
 
           with torch.no_grad():
               outputs = model.generate(
-                  **encoded, max_new_tokens=200,
-                  temperature=0.7, top_p=0.9, do_sample=True,
-                  repetition_penalty=1.2, pad_token_id=tokenizer.eos_token_id
+                  **encoded,
+                  max_new_tokens=200,
+                  temperature=0.7,
+                  top_p=0.9,
+                  do_sample=True,
+                  repetition_penalty=1.2,
+                  pad_token_id=tokenizer.eos_token_id
               )
 
           new_tokens = outputs[0][input_length:]
@@ -76,19 +95,24 @@ jobs:
 
           os.makedirs("answers", exist_ok=True)
           with open(f"answers/{msg_id}.json", "w") as f:
-              json.dump({"msg_id": msg_id, "question": question, "answer": response, "status": "done"}, f)
+              json.dump({
+                  "msg_id": msg_id,
+                  "question": question,
+                  "answer": response,
+                  "status": "done"
+              }, f)
           print("=== Done ===")
           PYEOF
         env:
           USER_QUESTION: ${{ github.event.inputs.question }}
           MSG_ID: ${{ github.event.inputs.msg_id }}
 
-      - name: Commit answer to repo
+      - name: Commit answer
         run: |
           git config user.name "TinyLlama Bot"
           git config user.email "bot@github.com"
           git add answers/
-          git commit -m "Answer for msg ${{ github.event.inputs.msg_id }}" || echo "Nothing to commit"
+          git commit -m "Answer [${{ github.event.inputs.msg_id }}]" || echo "Nothing to commit"
           git push
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
