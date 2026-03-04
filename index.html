@@ -6,69 +6,102 @@
   <title>TinyLlama Chat</title>
   <style>
     *{box-sizing:border-box;margin:0;padding:0}
-    body{font-family:'Segoe UI',sans-serif;background:#0d1117;color:#c9d1d9;display:flex;flex-direction:column;align-items:center;min-height:100vh;padding:20px}
-    h1{margin:24px 0 4px;font-size:1.9rem;color:#58a6ff;display:flex;align-items:center;gap:10px}
-    .sub{color:#8b949e;font-size:.88rem;margin-bottom:18px;text-align:center}
-    #chat-box{width:100%;max-width:760px;background:#161b22;border:1px solid #30363d;border-radius:14px;padding:18px;height:58vh;overflow-y:auto;display:flex;flex-direction:column;gap:14px}
-    .msg{max-width:82%;padding:11px 15px;border-radius:12px;line-height:1.55;font-size:.94rem;word-wrap:break-word;white-space:pre-wrap}
-    .msg .name{font-size:.68rem;font-weight:700;letter-spacing:.6px;text-transform:uppercase;opacity:.55;margin-bottom:4px}
-    .user{align-self:flex-end;background:#1f6feb;color:#fff;border-bottom-right-radius:3px}
-    .bot{align-self:flex-start;background:#21262d;border:1px solid #30363d;border-bottom-left-radius:3px}
-    .thinking{align-self:flex-start;background:#161b22;border:1px dashed #388bfd;color:#388bfd;font-style:italic;animation:pulse 1.3s ease-in-out infinite}
-    @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
-    #row{display:flex;gap:10px;width:100%;max-width:760px;margin-top:12px}
-    #inp{flex:1;padding:13px 16px;border-radius:9px;border:1px solid #30363d;background:#161b22;color:#c9d1d9;font-size:.95rem;outline:none;resize:none;line-height:1.4}
+    body{font-family:'Segoe UI',sans-serif;background:#0d1117;color:#c9d1d9;display:flex;flex-direction:column;align-items:center;min-height:100vh;padding:16px}
+    h1{margin:20px 0 4px;font-size:1.75rem;color:#58a6ff}
+    .sub{color:#8b949e;font-size:.85rem;margin-bottom:14px;text-align:center}
+    #chat-box{width:100%;max-width:760px;background:#161b22;border:1px solid #30363d;border-radius:12px;padding:16px;height:56vh;overflow-y:auto;display:flex;flex-direction:column;gap:12px}
+    .msg{max-width:83%;padding:10px 14px;border-radius:11px;line-height:1.55;font-size:.93rem;word-wrap:break-word;white-space:pre-wrap}
+    .lbl{font-size:.66rem;font-weight:700;letter-spacing:.6px;text-transform:uppercase;opacity:.5;margin-bottom:3px}
+    .user{align-self:flex-end;background:#1f6feb;color:#fff;border-bottom-right-radius:2px}
+    .bot{align-self:flex-start;background:#21262d;border:1px solid #30363d;border-bottom-left-radius:2px}
+    .thinking{align-self:flex-start;background:#0d1117;border:1px dashed #388bfd;color:#388bfd;font-style:italic;animation:blink 1.2s ease-in-out infinite}
+    @keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+    #row{display:flex;gap:9px;width:100%;max-width:760px;margin-top:10px}
+    #inp{flex:1;padding:12px 15px;border-radius:8px;border:1px solid #30363d;background:#161b22;color:#c9d1d9;font-size:.93rem;outline:none;resize:none;line-height:1.4;font-family:inherit}
     #inp:focus{border-color:#388bfd}
-    #btn{padding:0 22px;background:#238636;color:#fff;border:none;border-radius:9px;cursor:pointer;font-size:1rem;font-weight:600;transition:background .18s;white-space:nowrap}
+    #btn{padding:0 20px;background:#238636;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:.95rem;font-weight:600;transition:background .15s}
     #btn:hover{background:#2ea043}
-    #btn:disabled{background:#30363d;cursor:not-allowed}
-    .status{width:100%;max-width:760px;margin-top:7px;font-size:.78rem;color:#8b949e;min-height:16px}
-    .footer{margin-top:12px;font-size:.76rem;color:#484f58;text-align:center}
-    .footer a{color:#388bfd;text-decoration:none}
-    .footer a:hover{text-decoration:underline}
-    .setup-banner{background:#161b22;border:1px solid #f0883e;border-radius:10px;padding:14px 18px;max-width:760px;width:100%;margin-bottom:12px;font-size:.85rem;line-height:1.6;color:#c9d1d9;display:none}
-    .setup-banner b{color:#f0883e}
-    .setup-banner code{background:#0d1117;padding:2px 6px;border-radius:4px;font-size:.82rem;color:#79c0ff}
+    #btn:disabled{background:#21262d;color:#484f58;cursor:not-allowed;border:1px solid #30363d}
+    .status{width:100%;max-width:760px;margin-top:6px;font-size:.76rem;color:#8b949e;min-height:15px}
+    .links{margin-top:10px;font-size:.74rem;color:#484f58;text-align:center}
+    .links a{color:#388bfd;text-decoration:none}
+    #setup{background:#161b22;border:1px solid #f0883e55;border-radius:10px;padding:14px 18px;max-width:760px;width:100%;margin-bottom:12px;font-size:.83rem;line-height:1.7;display:none}
+    #setup b{color:#f0883e}
+    #setup code{background:#0d1117;border:1px solid #30363d;padding:2px 7px;border-radius:4px;font-size:.8rem;color:#79c0ff;word-break:break-all}
+    #setup input{width:100%;margin-top:8px;padding:8px 12px;border-radius:7px;border:1px solid #388bfd;background:#0d1117;color:#c9d1d9;font-size:.83rem;outline:none}
+    #setup button{margin-top:7px;padding:6px 16px;background:#238636;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:.82rem}
   </style>
 </head>
 <body>
-  <h1><svg width="28" height="28" viewBox="0 0 32 32" fill="none"><circle cx="16" cy="16" r="15" fill="#1f6feb"/><text x="7" y="22" font-size="16" fill="white">&#129302;</text></svg>TinyLlama Chat</h1>
-  <div class="sub">Powered by TinyLlama-1.1B &mdash; runs entirely on GitHub Actions (free)</div>
-  <div class="setup-banner" id="banner">
-    <b>&#9888; One-time setup needed.</b> To enable the chat, the repo owner needs to add a <code>CHAT_TOKEN</code> GitHub Secret.<br/>
-    See the <a href="https://github.com/PranayMahendrakar/tinyllama-runner#setup" target="_blank">README setup instructions</a>.
+  <h1>&#129302; TinyLlama Chat</h1>
+  <div class="sub">Powered by TinyLlama-1.1B &mdash; runs on GitHub Actions (free, no local setup)</div>
+
+  <div id="setup">
+    <b>&#9888; Token required to trigger GitHub Actions.</b><br/>
+    Paste a GitHub Fine-Grained PAT with <code>Actions: write</code> permission on this repo.<br/>
+    <small style="color:#8b949e">It is stored only in your browser. Never sent to any server except GitHub API.</small><br/>
+    <input id="tok-inp" type="password" placeholder="github_pat_... or ghp_..."/>
+    <button onclick="saveToken()">Save &amp; start chatting</button>
   </div>
+
   <div id="chat-box">
-    <div class="msg bot"><div class="name">TinyLlama</div>Hi! Ask me anything. I run on GitHub Actions &mdash; responses take about 2&ndash;3 minutes while the model loads and generates. Just send your message!</div>
+    <div class="msg bot"><div class="lbl">TinyLlama</div>Hi! Ask me anything. Each message triggers a GitHub Actions run &mdash; TinyLlama loads and replies in about 2&ndash;3 minutes.</div>
   </div>
   <div id="row">
-    <textarea id="inp" rows="1" placeholder="Ask TinyLlama anything..."></textarea>
-    <button id="btn">Send &#10148;</button>
+    <textarea id="inp" rows="1" placeholder="Type a message and press Enter..."></textarea>
+    <button id="btn" disabled>Send</button>
   </div>
   <div class="status" id="status"></div>
-  <div class="footer">
-    No local setup needed &bull; Runs on GitHub Actions free tier &bull;
-    <a href="https://github.com/PranayMahendrakar/tinyllama-runner/actions" target="_blank">View runs</a>
-    &bull;
-    <a href="https://github.com/PranayMahendrakar/tinyllama-runner" target="_blank">Source code</a>
+  <div class="links">
+    No local setup &bull; Runs on GitHub&apos;s free compute &bull;
+    <a href="https://github.com/PranayMahendrakar/tinyllama-runner/actions" target="_blank">View runs</a> &bull;
+    <a href="https://github.com/PranayMahendrakar/tinyllama-runner" target="_blank">Source</a> &bull;
+    <a href="#" onclick="clearToken();return false">Reset token</a>
   </div>
 
   <script>
-    var OWNER  = "PranayMahendrakar";
-    var REPO   = "tinyllama-runner";
-    var RAW    = "https://raw.githubusercontent.com/" + OWNER + "/" + REPO + "/main/answers/";
-    var PROXY  = "https://tinyllama-chat-proxy.pranaymahendrakar.workers.dev/trigger";
+    var OWNER = "PranayMahendrakar";
+    var REPO  = "tinyllama-runner";
+    var RAW   = "https://raw.githubusercontent.com/" + OWNER + "/" + REPO + "/main/answers/";
+    var GH_API = "https://api.github.com";
 
+    function getToken(){ return localStorage.getItem("tl_tok") || ""; }
     function setStatus(t){ document.getElementById("status").textContent = t; }
 
-    function addMsg(text, cls) {
+    function saveToken(){
+      var t = document.getElementById("tok-inp").value.trim();
+      if(!t){ alert("Please paste a token"); return; }
+      localStorage.setItem("tl_tok", t);
+      document.getElementById("setup").style.display = "none";
+      document.getElementById("btn").disabled = false;
+      setStatus("Token saved. Ready to chat!");
+    }
+
+    function clearToken(){
+      localStorage.removeItem("tl_tok");
+      document.getElementById("btn").disabled = true;
+      document.getElementById("setup").style.display = "block";
+      setStatus("Token cleared.");
+    }
+
+    function init(){
+      var tok = getToken();
+      if(tok){
+        document.getElementById("btn").disabled = false;
+        setStatus("Ready.");
+      } else {
+        document.getElementById("setup").style.display = "block";
+      }
+    }
+
+    function addMsg(text, cls){
       var box = document.getElementById("chat-box");
       var d = document.createElement("div");
       d.className = "msg " + cls;
-      var name = document.createElement("div");
-      name.className = "name";
-      name.textContent = cls === "user" ? "You" : (cls === "thinking" ? "TinyLlama is thinking..." : "TinyLlama");
-      d.appendChild(name);
+      var lbl = document.createElement("div");
+      lbl.className = "lbl";
+      lbl.textContent = cls==="user" ? "You" : (cls==="thinking" ? "Thinking..." : "TinyLlama");
+      d.appendChild(lbl);
       var s = document.createElement("span");
       s.textContent = text;
       d.appendChild(s);
@@ -77,78 +110,72 @@
       return d;
     }
 
-    function removeEl(el){ if(el && el.parentNode) el.parentNode.removeChild(el); }
+    function removeEl(el){ if(el&&el.parentNode) el.parentNode.removeChild(el); }
     function sleep(ms){ return new Promise(function(r){ setTimeout(r,ms); }); }
+    function genId(){ return Date.now().toString(36)+Math.random().toString(36).substr(2,5); }
 
-    function genId() {
-      return Date.now().toString(36) + Math.random().toString(36).substr(2,5);
+    async function triggerWorkflow(q, msgId){
+      var tok = getToken();
+      var res = await fetch(GH_API+"/repos/"+OWNER+"/"+REPO+"/actions/workflows/chat.yml/dispatches",{
+        method:"POST",
+        headers:{"Authorization":"Bearer "+tok,"Accept":"application/vnd.github+json","Content-Type":"application/json"},
+        body:JSON.stringify({ref:"main",inputs:{question:q,msg_id:msgId}})
+      });
+      return res.status===204;
     }
 
-    async function pollAnswer(msgId, maxWait) {
-      var url = RAW + msgId + ".json?t=" + Date.now();
-      var deadline = Date.now() + maxWait;
+    async function pollAnswer(msgId){
+      var deadline = Date.now() + 360000;
       var attempt = 0;
-      while (Date.now() < deadline) {
+      while(Date.now() < deadline){
         attempt++;
-        try {
-          var r = await fetch(url + "&a=" + attempt, {cache:"no-store"});
-          if (r.ok) {
-            var data = await r.json();
-            if (data && data.status === "done" && data.answer) return data.answer;
+        await sleep(7000);
+        try{
+          var r = await fetch(RAW+msgId+".json?nc="+attempt,{cache:"no-store"});
+          if(r.ok){
+            var d = await r.json();
+            if(d && d.status==="done" && d.answer) return d.answer;
           }
-        } catch(e){}
-        setStatus("Waiting for TinyLlama... (" + attempt + ") ~2-3 min total");
-        await sleep(6000);
+        }catch(e){}
+        setStatus("Waiting for TinyLlama... ("+attempt+") ~2-3 min total");
       }
       return null;
     }
 
-    async function sendMessage() {
+    async function sendMessage(){
       var inp = document.getElementById("inp");
       var btn = document.getElementById("btn");
       var q = inp.value.trim();
-      if (!q) return;
+      if(!q || btn.disabled) return;
+      var tok = getToken();
+      if(!tok){ clearToken(); return; }
 
       inp.value = "";
       btn.disabled = true;
       addMsg(q, "user");
-      var thinkEl = addMsg("Starting GitHub Actions run...", "thinking");
-      setStatus("Triggering workflow via proxy...");
+      var thinkEl = addMsg("Triggering GitHub Actions...", "thinking");
+      setStatus("Sending...");
 
       var msgId = genId();
+      var ok = await triggerWorkflow(q, msgId);
 
-      try {
-        var res = await fetch(PROXY, {
-          method: "POST",
-          headers: {"Content-Type":"application/json"},
-          body: JSON.stringify({ question: q, msg_id: msgId })
-        });
-
-        if (!res.ok) {
-          var errText = await res.text();
-          removeEl(thinkEl);
-          addMsg("Could not trigger workflow. Proxy error: " + res.status + ". Make sure the Cloudflare Worker is deployed.", "bot");
-          btn.disabled = false;
-          setStatus("");
-          return;
-        }
-      } catch(e) {
+      if(!ok){
         removeEl(thinkEl);
-        addMsg("Network error reaching proxy: " + e.message + ". Check that the Cloudflare Worker is running.", "bot");
+        addMsg("Could not trigger workflow. Your token may be expired or have insufficient scope (needs Actions: write). Click 'Reset token' to re-enter.", "bot");
         btn.disabled = false;
-        setStatus("");
+        clearToken();
         return;
       }
 
-      setStatus("Workflow triggered! TinyLlama is loading...");
-      var answer = await pollAnswer(msgId, 360000);
+      setStatus("Workflow triggered! TinyLlama is loading (~2-3 min)...");
+      var answer = await pollAnswer(msgId);
       removeEl(thinkEl);
 
-      if (answer) {
+      if(answer){
         addMsg(answer, "bot");
         setStatus("Done.");
       } else {
-        addMsg("Timed out waiting (6 min). Check https://github.com/PranayMahendrakar/tinyllama-runner/actions for the run status.", "bot");
+        addMsg("Timed out (6 min). The run may still complete. Check: github.com/"+OWNER+"/"+REPO+"/actions", "bot");
         setStatus("Timed out.");
       }
       btn.disabled = false;
@@ -156,8 +183,10 @@
 
     document.getElementById("btn").addEventListener("click", sendMessage);
     document.getElementById("inp").addEventListener("keydown", function(e){
-      if (e.key === "Enter" && !e.shiftKey){ e.preventDefault(); sendMessage(); }
+      if(e.key==="Enter"&&!e.shiftKey){ e.preventDefault(); sendMessage(); }
     });
+
+    init();
   </script>
 </body>
 </html>
