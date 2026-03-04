@@ -1,4 +1,4 @@
-name: TinyLlama Chat API
+name: Fast Chat API
 
 on:
   workflow_dispatch:
@@ -21,7 +21,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up Python
         uses: actions/setup-python@v4
@@ -32,75 +32,66 @@ jobs:
         uses: actions/cache@v3
         with:
           path: ~/.cache/pip
-          key: pip-transformers-torch
-          restore-keys: pip-transformers-torch
+          key: pip-qwen-fast-v1
+          restore-keys: pip-qwen-fast-v1
 
-      - name: Cache TinyLlama model
+      - name: Cache model
         uses: actions/cache@v3
         id: model-cache
         with:
           path: ./model
-          key: tinyllama-1.1b-chat-v1.0
+          key: qwen2.5-0.5b-instruct-v1
 
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          pip install -q torch --index-url https://download.pytorch.org/whl/cpu
+          pip install -q transformers accelerate
 
-      - name: Run TinyLlama
+      - name: Run inference
         run: |
           python - <<'PYEOF'
           from transformers import AutoModelForCausalLM, AutoTokenizer
           import torch, os, json
 
           question = os.environ.get("USER_QUESTION", "Who are you?")
-          msg_id   = os.environ.get("MSG_ID", "default")
-          print(f"Question: {question}")
+          msg_id = os.environ.get("MSG_ID", "default")
+          print(f"Q: {question}")
 
-          model_name = "TinyLlama/TinyLlama-1.1B-Chat-v1.0"
-          cache_dir  = "./model"
+          model_name = "Qwen/Qwen2.5-0.5B-Instruct"
+          cache_dir = "./model"
 
           tokenizer = AutoTokenizer.from_pretrained(model_name, cache_dir=cache_dir)
           model = AutoModelForCausalLM.from_pretrained(
-              model_name, cache_dir=cache_dir, torch_dtype=torch.float32
+              model_name,
+              cache_dir=cache_dir,
+              torch_dtype=torch.float16,
+              low_cpu_mem_usage=True,
           )
-          model.to(torch.device("cpu"))
           model.eval()
           print("Model ready.")
 
           messages = [
-              {"role": "system", "content": "You are a helpful, friendly AI assistant."},
-              {"role": "user",   "content": question}
+              {"role": "system", "content": "You are a helpful AI assistant. Be concise."},
+              {"role": "user", "content": question}
           ]
-          prompt = tokenizer.apply_chat_template(
-              messages, tokenize=False, add_generation_prompt=True
-          )
-          encoded = tokenizer(prompt, return_tensors="pt")
-          input_length = encoded["input_ids"].shape[1]
+          text = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
+          encoded = tokenizer([text], return_tensors="pt")
+          input_len = encoded["input_ids"].shape[1]
 
           with torch.no_grad():
-              outputs = model.generate(
+              out = model.generate(
                   **encoded,
-                  max_new_tokens=200,
-                  temperature=0.7,
-                  top_p=0.9,
-                  do_sample=True,
-                  repetition_penalty=1.2,
-                  pad_token_id=tokenizer.eos_token_id
+                  max_new_tokens=150,
+                  do_sample=False,
+                  pad_token_id=tokenizer.eos_token_id,
               )
 
-          new_tokens = outputs[0][input_length:]
-          response = tokenizer.decode(new_tokens, skip_special_tokens=True).strip()
-          print(f"TinyLlama: {response}")
+          response = tokenizer.decode(out[0][input_len:], skip_special_tokens=True).strip()
+          print(f"Answer: {response}")
 
           os.makedirs("answers", exist_ok=True)
           with open(f"answers/{msg_id}.json", "w") as f:
-              json.dump({
-                  "msg_id": msg_id,
-                  "question": question,
-                  "answer": response,
-                  "status": "done"
-              }, f)
+              json.dump({"msg_id": msg_id, "question": question, "answer": response, "status": "done"}, f)
           print("=== Done ===")
           PYEOF
         env:
@@ -109,10 +100,10 @@ jobs:
 
       - name: Commit answer
         run: |
-          git config user.name "TinyLlama Bot"
+          git config user.name "ChatBot"
           git config user.email "bot@github.com"
           git add answers/
-          git commit -m "Answer [${{ github.event.inputs.msg_id }}]" || echo "Nothing to commit"
+          git commit -m "ans[${{ github.event.inputs.msg_id }}]" || echo "Nothing to commit"
           git push
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
