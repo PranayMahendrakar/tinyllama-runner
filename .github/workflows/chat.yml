@@ -23,70 +23,69 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.10'
-
       - name: Cache pip packages
         uses: actions/cache@v3
         with:
           path: ~/.cache/pip
-          key: pip-qwen-fast-v1
-          restore-keys: pip-qwen-fast-v1
+          key: pip-llama-cpp-v2
+          restore-keys: pip-llama-cpp-v2
 
-      - name: Cache model
+      - name: Cache GGUF model
         uses: actions/cache@v3
         id: model-cache
         with:
           path: ./model
-          key: qwen2.5-0.5b-instruct-v1
+          key: qwen2.5-0.5b-gguf-q4km-v1
 
       - name: Install dependencies
         run: |
-          pip install -q torch --index-url https://download.pytorch.org/whl/cpu
-          pip install -q transformers accelerate
+          pip install -q llama-cpp-python huggingface_hub
+
+      - name: Download model (if not cached)
+        if: steps.model-cache.outputs.cache-hit != 'true'
+        run: |
+          python - <<'PYEOF'
+          from huggingface_hub import hf_hub_download
+          import os
+          os.makedirs("./model", exist_ok=True)
+          path = hf_hub_download(
+              repo_id="Qwen/Qwen2.5-0.5B-Instruct-GGUF",
+              filename="qwen2.5-0.5b-instruct-q4_k_m.gguf",
+              local_dir="./model"
+          )
+          print(f"Downloaded to: {path}")
+          PYEOF
 
       - name: Run inference
         run: |
           python - <<'PYEOF'
-          from transformers import AutoModelForCausalLM, AutoTokenizer
-          import torch, os, json
+          from llama_cpp import Llama
+          import os, json
 
           question = os.environ.get("USER_QUESTION", "Who are you?")
           msg_id = os.environ.get("MSG_ID", "default")
           print(f"Q: {question}")
 
-          model_name = "Qwen/Qwen2.5-0.5B-Instruct"
-          cache_dir = "./model"
-
-          tokenizer = AutoTokenizer.from_pretrained(model_name, cache_dir=cache_dir)
-          model = AutoModelForCausalLM.from_pretrained(
-              model_name,
-              cache_dir=cache_dir,
-              torch_dtype=torch.float16,
-              low_cpu_mem_usage=True,
+          model_path = "./model/qwen2.5-0.5b-instruct-q4_k_m.gguf"
+          llm = Llama(
+              model_path=model_path,
+              n_ctx=512,
+              n_threads=4,
+              verbose=False
           )
-          model.eval()
-          print("Model ready.")
 
           messages = [
-              {"role": "system", "content": "You are a helpful AI assistant. Be concise."},
+              {"role": "system", "content": "You are a helpful AI. Be concise."},
               {"role": "user", "content": question}
           ]
-          text = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
-          encoded = tokenizer([text], return_tensors="pt")
-          input_len = encoded["input_ids"].shape[1]
 
-          with torch.no_grad():
-              out = model.generate(
-                  **encoded,
-                  max_new_tokens=150,
-                  do_sample=False,
-                  pad_token_id=tokenizer.eos_token_id,
-              )
+          output = llm.create_chat_completion(
+              messages=messages,
+              max_tokens=100,
+              temperature=0.0,
+          )
 
-          response = tokenizer.decode(out[0][input_len:], skip_special_tokens=True).strip()
+          response = output["choices"][0]["message"]["content"].strip()
           print(f"Answer: {response}")
 
           os.makedirs("answers", exist_ok=True)
