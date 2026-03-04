@@ -26,16 +26,11 @@
     .links{margin-top:10px;font-size:.73rem;color:#484f58;text-align:center;line-height:1.8}
     .links a{color:#388bfd;text-decoration:none}
     .links a:hover{text-decoration:underline}
-    #no-token-msg{display:none;background:#161b22;border:1px solid #f0883e55;border-radius:10px;padding:14px 18px;max-width:760px;width:100%;margin-bottom:12px;font-size:.83rem;color:#c9d1d9;line-height:1.7}
-    #no-token-msg b{color:#f0883e}
   </style>
 </head>
 <body>
   <h1>&#129302; TinyLlama Chat</h1>
   <div class="sub">Runs entirely on GitHub Actions &mdash; no local setup, no servers</div>
-  <div id="no-token-msg">
-    <b>&#9888; Chat not configured yet.</b> The repo owner needs to add a <b>CHAT_TOKEN</b> secret and deploy the site. See the README for instructions.
-  </div>
   <div id="chat-box">
     <div class="msg bot"><div class="lbl">TinyLlama</div>Hi! Ask me anything. I run on GitHub Actions &mdash; your message triggers a run and I reply in about 2&ndash;3 minutes.</div>
   </div>
@@ -58,12 +53,6 @@
     var GH_API = "https://api.github.com";
 
     function setStatus(t){ document.getElementById("status").textContent = t; }
-
-    if (!TOKEN || TOKEN === "__CHAT_TOKEN__" || TOKEN.length < 10) {
-      document.getElementById("no-token-msg").style.display = "block";
-      document.getElementById("btn").disabled = true;
-      document.getElementById("inp").placeholder = "Chat not configured yet.";
-    }
 
     function addMsg(text, cls){
       var box = document.getElementById("chat-box");
@@ -140,7 +129,7 @@
         return;
       }
 
-      setStatus("Workflow triggered! TinyLlama is loading the model (~2-3 min first run, faster after caching)...");
+      setStatus("Workflow triggered! TinyLlama is loading the model (cached after first run)...");
       var answer = await pollAnswer(msgId);
       removeEl(thinkEl);
 
@@ -148,7 +137,7 @@
         addMsg(answer, "bot");
         setStatus("Done.");
       } else {
-        addMsg("Timed out (6 min). The run may still be going. Check: github.com/"+OWNER+"/"+REPO+"/actions", "bot");
+        addMsg("Timed out (6 min). Check: github.com/"+OWNER+"/"+REPO+"/actions", "bot");
         setStatus("Timed out.");
       }
       btn.disabled = false;
